@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+
+
+    <div class="header">
+        <h1>Anonymouse Chat room</h1>
+
+        <textarea id="token"></textarea>
+    </div>
+
+    <div class="chat" id="chat">
+    </div>
+    <input type="text" placeholder="کاربر" id="user">
+
+    <input type="text" placeholder="بنویسید" id="text">
+
+    <button id="sendBtn">بفرست</button>
+
+    <style>
+        .header {
+            text-align: center;
+            color: white;
+        }
+
+        body {
+            background: black;
+        }
+
+        .chat {
+            background-color: black;
+            color: wheat;
+            width: 300px;
+            height: 400px;
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/rayconnect-client@0.11.50/dist/browser/bundle.js"></script>
+
+    <script>
+
+        // connect to rayconnect server as a bus
+        const rayconnect = new Rayconnect({
+            scopes: 'user,chat', // example : chats,apps,users
+            appID: 'anonymousechat', // your app id from registration process
+            space: 'main', // main or debug
+            type: 'client' // micros for server and client for browsers (or cli client)
+        });
+
+        // if connected to bus
+
+        rayconnect.OnConnect(async () => {
+
+            // یک یوزر مهمان از سیستم دریافت کن
+            await rayconnect.GetGuestAccess()
+
+
+            // یوزری که قراره به صورت ناشناس با من جفت بشه
+            let user = ''
+
+
+            // توکن من در مجموعه رای کانکت
+
+            document.getElementById("token").value = rayconnect.user.token
+
+
+
+
+            
+            // نو بک اند
+            const post = await rayconnect.store.find("posts", "h1oWHcmsuAuaaiFx1qzkWzyaadxKuXH1A7AJJNcU1Ij")
+
+            console.log(post)
+
+            const deleted = await rayconnect.store.remove("posts", "h1oWHcmsuAuaaiFx1qzkWzyaadxKuXH1A7AJJNcU1Ij")
+
+            console.log(deleted)
+
+
+
+
+            // به یک سرویس متصل به رای کانکت ( مثلا سرور) اطلاع جوین بده
+            rayconnect.Call({
+                method: "GET",
+                scope: "user",
+                address: "join",
+                data: {
+                }
+            })
+
+
+            document.getElementById("sendBtn").onclick = function () {
+
+                // از اینپوت توکن گیرنده را بگیر
+                const token = document.getElementById("user").value
+
+                // متن را قبل از ارسال به رایکانکت در خود مرورگر اضافه کن
+                document.getElementById("chat").innerHTML += `\n  <p><span style="color:red">${token} : </span> ${document.getElementById("text").value}</p>`
+
+
+                // اجرای یک دستور العمل در رای کانکت (مانند اجرای یک تابع)
+                rayconnect.Call({
+                    method: "GET",
+                    scope: "chat",
+                    address: "send",
+                    user: "*",
+                    token: token,
+                    data: {
+                        message: document.getElementById("text").value
+                    }
+                })
+            }
+
+
+            // تعریف یک تابع 
+            rayconnect.Query({
+                scope: "chat",
+                address: "send",
+                method: "GET"
+            }, (req) => {
+                const tokenF = req.token
+                const message = req.data.message
+
+
+                console.log(tokenF)
+                console.log(message)
+                document.getElementById("chat").innerHTML += `\n  <p><span style="color:red">${tokenF} : </span> ${message}</p>`
+            })
+
+            setInterval(async () => {
+                const data = await rayconnect.Run({
+                    method: "GET",
+                    scope: "user",
+                    address: "get",
+                    data: {
+                    }
+                })
+                if (data.data.user) {
+                    document.getElementById("user").value = data.data.user
+                }
+            }, 3000);
+
+        })
+    </script>
+</body>
+
+</html>
